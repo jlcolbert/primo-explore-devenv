@@ -5,7 +5,6 @@ primo-explore/tmp/
 !primo-explore/tmp/.gitignore
 
 .idea/
-package-lock.json
 node_modules/*
 
 .yarn/*
