@@ -1,0 +1,14 @@
+{
+  "plugins": [
+    "angularjs-annotate",
+    [
+      "transform-define",
+      {
+        "process.env.NODE_ENV": "production",
+        "typeof window": "object"
+      }
+    ],
+    "transform-html-import-to-string"
+  ],
+  "presets": ["@babel/preset-env"]
+}
