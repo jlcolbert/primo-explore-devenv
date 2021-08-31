@@ -1,0 +1,39 @@
+x-environment: &x-environment
+  PROXY_SERVER: ${PROXY_SERVER-https://unh.primo.exlibrisgroup.com:443}
+  NODE_ENV: ${NODE_ENV-development}
+  VIEW: ${VIEW-01USNH_UNH-MAIN}
+
+x-defaults: &x-defaults
+  build:
+    context: .
+    cache_from:
+      - primo-explore-devenv
+  image: primo-explore-devenv
+  environment:
+    <<: *x-environment
+  ports:
+    - 8003:8003
+    - 3001:3001
+  # volumes:
+  #   - ./primo-explore:/app/primo-explore
+
+version: "3.7"
+services:
+  web:
+    <<: *x-defaults
+    environment:
+      <<: *x-environment
+
+  create-package:
+    <<: *x-defaults
+    environment:
+      <<: *x-environment
+      NODE_ENV: ${NODE_ENV-staging}
+    command: yarn create-package
+
+  yarn:
+    image: node:current
+    working_dir: /app
+    entrypoint: ["yarn"]
+    volumes:
+      - ./:/app
