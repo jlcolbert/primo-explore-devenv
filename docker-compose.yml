@@ -8,6 +8,8 @@ x-defaults: &x-defaults
     context: .
     cache_from:
       - primo-explore-devenv
+      - jlcolbert/primo-explore-devenv
+      - https://hub.docker.com/r/jlcolbert/primo-explore-devenv
   image: primo-explore-devenv
   environment:
     <<: *x-environment
