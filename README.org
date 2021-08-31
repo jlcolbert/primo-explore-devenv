@@ -1,4 +1,4 @@
-#+TITLE:   Primo Explore Docker Development Environment
+#+TITLE:   Primo Explore Development Environment
 #+DATE:    August 30, 2021
 #+SINCE:   3.0.0
 #+STARTUP: inlineimages nofold
@@ -9,23 +9,114 @@
 - [[#prerequisites][Prerequisites]]
 - [[#features][Features]]
 - [[#configuration][Configuration]]
-- [[#troubleshooting][Troubleshooting]]
+  - [[#view-customization-packages][View Customization Packages]]
+    - [[#javascript][JavaScript]]
+    - [[#scss][(S)CSS]]
+  - [[#docker][Docker]]
+  - [[#local][Local]]
+- [[#running][Running]]
+  - [[#docker-1][Docker]]
+  - [[#local-1][Local]]
+- [[#todo][TODO]]
 
 * Description
-# A summary of what this module does.
+This is a fork of the [[github:ExLibrisGroup/primo-explore-devenv][Ex Libris Primo Explore development environment]].
+The primary purpose of this repository is to create a generalized Docker container of the development environment that isn't preconfigured for any one institution.
+The Gulp configuration and packages have also been updated to be compliant with ES6 (as much as they can be; I'm not a coder!).
+However, it is possible to use this development environment locally if you do not want to use Docker.
 
-COMPLETE README SOON.
+The Docker configuration is largely taken from the [[github:NYULibraries/primo-explore-devenv][NYU Libraries Primo Explore development environment]].
 
 ** Maintainers
 + @jlcolbert (Author)
 
 * Prerequisites
++ Node.js LTS or above
+  - I manage versions with =asdf=, but feel free to use whichever method of attaining Node that you prefer!
++ Yarn globally, then locally:
+  #+begin_src shell
+npm i -g yarn
+# within primo-explore-devenv
+yarn set version berry
+  #+end_src
++ Docker & Docker Compose if you plan to use Docker.
+  - Easiest way is to install Docker Desktop from their website or through your OS's package manager.
++ Primo VE
+  - If you don't have Primo VE, remove the ~--ve~ flags from =package.json=.
++ A clone of the repository on your computer (either from a fork or not):
+  #+begin_src shell
+git clone https://github.com/jlcolbert/primo-explore-devenv.git
+  #+end_src
 
 * Features
 # An in-depth list of features, how to use them, and their dependencies.
 
++ =Docker= - The dev environment is wrapped in a container via Docker and docker compose
++ =yarn= - Instead of =npm=, this environment uses yarn as a package manager
++ ES6 - All JavaScript in this repository follows ES6 syntax...I think.
++ Literate configuration - The Docker files are generated from =docker.org=. They go into more depth than this =README= and explain each option (to the best of my abilities).
+
 * Configuration
 # How to configure this module, including common problems and how to address them.
+** View Customization Packages
+Can't really have a development environment if you have nothing to develop!
 
-* Troubleshooting
-# Common issues and their solution, or places to look for help.
+You have three options:
+1. For either the Docker environment or the local environment, you can add your view folders to ~primo-explore/custom/~.
+2. When running locally, you can keep your view folders in a separate repository and symlink to this environment:
+   #+begin_src shell
+# In Mac/Linux
+# PWD: primo-explore-devenv
+rm -rf primo-explore
+ln -s /path/to/repos/primo-explore-views ./primo-explore
+   #+end_src
+3. You can keep your view folders in another repository that is /also/ a Docker environment and use this image as the base for that one.
+   a. See [[github:jlcolbert/primo-explore-views][our =primo-explore-views= monorepo for setup instructions]].
+
+*** JavaScript
+Because the environment configuration currently passes ~--browserify~ to gulp, you will need to have a =main.js= file as opposed to a =custom.module.js= file.
+You can see an example in the =test/TESTBROWSERIFY= folder.
+
+If you prefer to not use ~--browserify~, remove this flag from the start script in =package.json=.
+
+*** (S)CSS
+Because the environment configuration currently passes ~--useScss~ to gulp, you will need a =scss= folder in addition to a =css= folder for each view.
+You can see examples of directory setup and instructions in [[github:jlcolbert/primo-explore-views][our =primo-explore-views= repository]].
+
+If you prefer to not use ~--useScss~, remove this flag from the start script in =package.json=.
+
+** Docker
+1. Configure =docker-compose.yml= with your ~PROXY_SERVER~ and ~VIEW~ variables in the ~x-environment~ section.
+   a. However, if you do not wish to, you can pass these arguments along in the command line!
+   b. If you want to build the image locally instead of having it pulled from Docker Hub, feel free to change the ~VIEW~ variable in ~Dockerfile~.
+2. Depending on your preferences, you can either use the local image created via ~docker compose build~, or, if you do not need to alter the =Dockerfile= at all, you can change the image to ~jlcolbert/primo-explore-devenv~.
+3. If building locally, feel free to change the yarn scripts in ~package.json~. Right now, they are configured to pass the ~--browserify~, ~--ve~, and ~--useScss~ arguments to gulp.
+
+** Local
+1. In =gulpfile.esm.js/config.js=, change the ~PROXY_SERVER~ constant to your institution's.
+2. If desired, change the yarn scripts in ~package.json~. Right now, they are configured to pass the ~--browserify~, ~--ve~, and ~--useScss~ arguments to gulp.
+
+* Running
+** Docker
+1. ~docker compose build~ if you want to build the image locally.
+2. ~docker compose up web~
+   a. This is when you would pass along your institutional variables:
+      a. ~VIEW={YOUR VIEW HERE}~
+      b. ~PROXY_SERVER={YOUR PROXY HERE}~
+      c. Example: ~VIEW=01USNH_UNH-MAIN PROXY_SERVER=https://unh.primo.exlibrisgroup.com:443 docker compose up web~
+
+Then, go to ~http://localhost:8003/discovery/?vid=YOUR:VIEW~.
+The browser will update your discovery layer as you make changes.
+
+** Local
+1. Install dependencies with yarn: ~yarn install~
+2. Start the server: ~PROXY_SERVER={YOUR PROXY HERE} VIEW={YOUR VIEW HERE} yarn start~
+   a. If you configured your variables in Gulp, then just run ~VIEW={YOUR VIEW HERE} yarn start~
+
+The development server will be at the same URL as before.
+
+* TODO
++ [ ] Add troubleshooting info
++ [ ] Create =docker.org= literate configuration
++ [ ] Create Wiki
++ [ ] Look into Circle CI for running automated build/push scripts
