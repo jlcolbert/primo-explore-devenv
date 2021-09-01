@@ -2,6 +2,9 @@ x-environment: &x-environment
   PROXY_SERVER: ${PROXY_SERVER-https://unh.primo.exlibrisgroup.com:443}
   NODE_ENV: ${NODE_ENV-development}
   VIEW: ${VIEW-01USNH_UNH-MAIN}
+  VE: ${VE-true}
+  BROWSERIFY: ${BROWSERIFY-true}
+  USESCSS: ${USESCSS-true}
 
 x-defaults: &x-defaults
   build:
