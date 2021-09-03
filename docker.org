@@ -1,0 +1,194 @@
+#+title:     Docker Literate Configuration
+#+author:    Jay L. Colbert
+#+email:     jay.colbert@unh.edu
+#+auto_tangle: t
+
+* Introduction
+This is a literate configuration for this repository's Docker files.
+=Dockerfile= and =docker-compose.yml= are both generated from this one file.
+If you use this repository, feel free to either edit those files individually or set up an Org Mode environment for literate programming.
+(More information on how to do that coming!)
+
+* Dockerfile
+Our =Dockerfile= is how we build our Docker image.
+#+begin_src conf :tangle Dockerfile :noweb tangle
+# syntax=docker/dockerfile:1
+<<docker-from>>
+
+<<docker-env>>
+
+# Build-base: Package/compilation Essentials
+# Git: for potential git-based NPM dependencies
+<<docker-base>>
+
+# Install node_modules with yarn
+<<docker-node>>
+
+<<docker-workdir>>
+
+# Installs packages for any subdirectories
+<<docker-install>>
+
+<<docker-copy>>
+
+<<docker-ports>>
+
+<<docker-command>>
+#+end_src
+
+First, we need to set our base image.
+In this instance, we are building our image in a Node.js environment.
+We use the Alpine Linux version because it is much smaller.
+#+begin_src conf :tangle no :noweb-ref docker-from
+FROM node:current-alpine
+#+end_src
+
+Next, we need to set the install path for our files.
+We do this be creating an ~ENV~ for ~INSTALL_PATH~.
+#+begin_src conf :tangle no :noweb-ref docker-env
+ENV INSTALL_PATH /app
+#+end_src
+
+Next, we need to install some necessary packages for the Alpine Linux environment.
+I am not sure why these are the necessary ones;
+I took this from other configurations!
+The ~RUN~ instruction tells Docker to run the indicated command in the command line.
+#+begin_src conf :tangle no :noweb-ref docker-base
+RUN apk add --update --no-cache \
+  build-base \
+  git
+
+RUN apk add xvfb
+#+end_src
+
+Now we are ready to get our Node.js modules installed.
+Instead of ~npm~, we will use ~yarn~ to do this.
+And in particular, we are using Yarn Version 3 (Berry) instead of classic Yarn Version 1.
+This section will copy over our =package.json= and =yarn.lock= files.
+Then, it will run the command to upgrade Yarn, configure how it handles node modules, and install our packages in our ~INSTALL_PATH~.
+#+begin_src conf :tangle no :noweb-ref docker-node
+COPY package.json yarn.lock /tmp/
+RUN cd /tmp && yarn set version berry && yarn config set nodeLinker node-modules && yarn install \
+  && mkdir -p $INSTALL_PATH \
+  && cd $INSTALL_PATH \
+  && cp -R /tmp/node_modules $INSTALL_PATH \
+  && rm -r /tmp/* && yarn cache clean
+#+end_src
+
+Let's move into our ~INSTALL_PATH~ for our working directory.
+#+begin_src conf :tangle no :noweb-ref docker-workdir
+WORKDIR $INSTALL_PATH
+#+end_src
+
+We copy over our Primo Explore directories.
+#+begin_src conf :tangle no :noweb-ref docker-install
+COPY package.json yarn.lock ./
+COPY ./primo-explore ./primo-explore
+#+end_src
+
+And then we copy over the rest of the repository.
+#+begin_src conf :tangle no :noweb-ref docker-copy
+COPY . .
+#+end_src
+
+We need to expose ports 8003 and 3001.
+#+begin_src conf :tangle no :noweb-ref docker-ports
+EXPOSE 8003 3001
+#+end_src
+
+And finally, this sets up the main command this Docker image will run.
+It begins with the various arguments to pass to ~gulp~ and then runs the ~gulp~ command with ~yarn start~;
+~yarn start~ is configured in =package.json=.
+#+begin_src conf :tangl no :noweb-ref docker-command
+CMD VIEW=${VIEW} PROXY_SERVER=${PROXY_SERVER} VE=${VE} BROWSERIFY=${BROWSERIFY} USESCSS=${USESCSS} yarn start
+#+end_src
+
+* Docker Compose
+Docker Compose helps us define multi-container Docker applications.
+What we might normally pass on to the ~docker~ command when running an image, we can specify in this Docker Compose file instead.
+
+In this Compose file, we specify some Environment Variables to pass on to the services we create.
+Then, we create the services;
+these will be our three main commands for running and creating our View packages, and also a service for Yarn.
+We can run all services simultaneously, or we can run them individually.
+#+begin_src yaml :tangle docker-compose.yml :noweb tangle
+<<docker-compose-env>>
+
+<<docker-compose-defaults>>
+
+version: "3.8"
+services:
+  <<docker-compose-web>>
+
+  <<docker-compose-create-package>>
+
+  <<docker-compose-yarn>>
+#+end_src
+
+We define our Environment Variables, including the proxy server, the node environment, which View we're working with, whether or not we are using Primo VE, whether or not we are using Browserify, and whether or not we are using SCSS.
+With these variables, we set defaults while giving the option to input other variables.
+For example, if I run ~docker compose up web~ with no additional configuration, it will run it with the defaults.
+However, if I want to edit our Manchester view instead of our Main view, I would run ~VIEW=01USNH_UNH-MANCH docker compose up web~.
+If you recall in our =Dockerfile=, these are the variables that get passed to ~gulp~!
+#+begin_src yaml :tangle no :noweb-ref docker-compose-env
+x-environment: &x-environment
+  PROXY_SERVER: ${PROXY_SERVER-https://unh.primo.exlibrisgroup.com:443}
+  NODE_ENV: ${NODE_ENV-development}
+  VIEW: ${VIEW-01USNH_UNH-MAIN}
+  VE: ${VE---ve}
+  BROWSERIFY: ${BROWSERIFY---browserify}
+  USESCSS: ${USESCSS---useScss}
+#+end_src
+
+We have some more variables, this time for some shared defaults.
+Here, we provide the name for our image, what ports we want exposed, where we are pulling a cache from, and the Environment Variables above.
+#+begin_src yaml :tangle no :noweb-ref docker-compose-defaults
+x-defaults: &x-defaults
+  build:
+    context: .
+    cache_from:
+      - primo-explore-devenv
+      - jlcolbert/primo-explore-devenv
+      - https://hub.docker.com/r/jlcolbert/primo-explore-devenv
+  image: primo-explore-devenv
+  environment:
+    <<: *x-environment
+  ports:
+    - 8003:8003
+    - 3001:3001
+  # volumes:
+  #   - ./primo-explore:/app/primo-explore
+#+end_src
+
+Here's our first service, ~web~.
+This service is what will allow us to edit our View packages.
+Essentially, running ~docker compose up web~ is the same as running ~gulp run --view 01USNH_UNH-MAIN --ve --browserify --useScss~.
+You'll see that we use the variables so that we don't have to type all that information again.
+#+begin_src yaml :tangle no :noweb-ref docker-compose-web
+web:
+  <<: *x-defaults
+  environment:
+    <<: *x-environment
+#+end_src
+
+This service is equivalent to ~gulp create-package~ when we want to compress our package for uploading to Primo.
+Notice that we have changed our node environment from ~development~ to ~staging~.
+We also have to pass a different command to it, as our default command is the one from the =Dockerfile=.
+#+begin_src yaml :tangle no :noweb-ref docker-compose-create-package
+create-package:
+  <<: *x-defaults
+  environment:
+    <<: *x-environment
+    NODE_ENV: ${NODE_ENV-staging}
+  command: yarn create-package
+#+end_src
+
+This final service makes sure yarn works as it should.
+#+begin_src yaml :tangle no :noweb-ref docker-compose-yarn
+yarn:
+  image: node:current
+  working_dir: /app
+  entrypoint: ["yarn"]
+  volumes:
+    - ./:/app
+#+end_src
