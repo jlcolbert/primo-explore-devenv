@@ -71,7 +71,7 @@
   ],
   "repository": "https://github.com/ExLibrisGroup/primo-explore-devenv",
   "scripts": {
-    "start": "gulp run $VIEW $VE $BROWSERIFY $USESCSS $PROXY_SERVER",
-    "create-package": "gulp create-package $VIEW $VE $BROWSERIFY $USESCSS $PROXY_SERVER"
+    "start": "gulp run --view $VIEW $VE $BROWSERIFY $USESCSS",
+    "build": "gulp create-package"
   }
 }

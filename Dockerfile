@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 FROM node:current-alpine
 
 ENV INSTALL_PATH /app
@@ -17,7 +16,7 @@ RUN cd /tmp && yarn set version berry && yarn config set nodeLinker node-modules
   && mkdir -p $INSTALL_PATH \
   && cd $INSTALL_PATH \
   && cp -R /tmp/node_modules $INSTALL_PATH \
-  && rm -r /tmp/* && yarn cache clean
+  && rm -r /tmp/*
 
 WORKDIR $INSTALL_PATH
 

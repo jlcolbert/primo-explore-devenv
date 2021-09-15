@@ -2,13 +2,14 @@ x-environment: &x-environment
   PROXY_SERVER: ${PROXY_SERVER-https://unh.primo.exlibrisgroup.com:443}
   NODE_ENV: ${NODE_ENV-development}
   VIEW: ${VIEW-01USNH_UNH-MAIN}
-  VE: ${VE---ve}
-  BROWSERIFY: ${BROWSERIFY---browserify}
-  USESCSS: ${USESCSS---useScss}
+  VE: ${VE}
+  BROWSERIFY: ${BROWSERIFY}
+  USESCSS: ${USESCSS}
 
 x-defaults: &x-defaults
   build:
     context: .
+    dockerfile: Dockerfile
     cache_from:
       - primo-explore-devenv
       - jlcolbert/primo-explore-devenv
@@ -34,11 +35,4 @@ services:
     environment:
       <<: *x-environment
       NODE_ENV: ${NODE_ENV-staging}
-    command: yarn create-package
-
-  yarn:
-    image: node:current
-    working_dir: /app
-    entrypoint: ["yarn"]
-    volumes:
-      - ./:/app
+    command: yarn build
